@@ -493,6 +493,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
   FD_ZERO(&wset);
 
   for (c = mgr->conns; c != NULL; c = c->next) {
+    c->is_readable = c->is_writable = 0;
     if (c->is_closing || c->is_resolving || FD(c) == INVALID_SOCKET) continue;
     FD_SET(FD(c), &rset);
     if (FD(c) > maxfd) maxfd = FD(c);
@@ -501,16 +502,18 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
     if (mg_tls_pending(c) > 0) tv = tv_zero;
   }
 
-  if ((rc = select((int) maxfd + 1, &rset, &wset, NULL, &tv)) < 0) {
-    MG_ERROR(("select: %d %d", rc, MG_SOCK_ERRNO));
-    FD_ZERO(&rset);
-    FD_ZERO(&wset);
-  }
+  if (maxfd > 0) {
+    if ((rc = select((int) maxfd + 1, &rset, &wset, NULL, &tv)) < 0) {
+      MG_ERROR(("select: %d %d", rc, MG_SOCK_ERRNO));
+      FD_ZERO(&rset);
+      FD_ZERO(&wset);
+    }
 
-  for (c = mgr->conns; c != NULL; c = c->next) {
-    c->is_readable = FD(c) != INVALID_SOCKET && FD_ISSET(FD(c), &rset);
-    c->is_writable = FD(c) != INVALID_SOCKET && FD_ISSET(FD(c), &wset);
-    if (mg_tls_pending(c) > 0) c->is_readable = 1;
+    for (c = mgr->conns; c != NULL; c = c->next) {
+      if (FD(c) != INVALID_SOCKET && FD_ISSET(FD(c), &rset)) c->is_readable = 1;
+      if (FD(c) != INVALID_SOCKET && FD_ISSET(FD(c), &wset)) c->is_writable = 1;
+      if (mg_tls_pending(c) > 0) c->is_readable = 1;
+    }
   }
 #endif
 }
