@@ -677,6 +677,26 @@ char buf[100];
 LOG(LL_INFO, ("%s", mg_straddr(&c->peer, buf, sizeof(buf))));
 ```
 
+### mg\_wrapfd()
+
+```c
+struct mg_connection *mg_wrapfd(struct mg_mgr *mgr, int fd,
+                                mg_event_handler_t fn, void *fn_data);
+```
+
+Wrap a given file descriptor `fd` into a connection, and add that connection
+to the event manager. An `fd` descriptor must suport `send()`, `recv()`,
+`select()` syscalls, and be non-blocking. Mongoose will treat it as a TCP
+socket. The `c->rem` and `c->loc` addresses will be empty.
+
+Parameters:
+- `fd` - A file descriptor to wrap
+- `mgr` - An event manager
+- `fn` - A pointer to event handler function
+- `ud` - A user data pointer. It will be passed to `fn` as `fn_data` parameter
+
+Return value: Pointer to the created connection or `NULL` in case of error
+
 ### mg\_mkpipe()
 
 ```c
